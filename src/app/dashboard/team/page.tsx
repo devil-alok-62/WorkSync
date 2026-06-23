@@ -12,8 +12,6 @@ import { Button } from "@/components/ui/button";
 
 import { Input } from "@/components/ui/input";
 
-import { Trash2 } from "lucide-react";
-
 import AddMemberDialog from "@/components/add-member-dialog";
 
 type Member = {

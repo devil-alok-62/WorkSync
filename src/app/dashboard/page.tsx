@@ -133,7 +133,7 @@ export default function DashboardPage() {
               <h2 className="text-xl font-semibold text-foreground">
                 Recent Tasks
               </h2>
-              <Link href="/dashboard/profile">
+              <Link href="/dashboard/tasks">
                 <Button variant="outline" size="sm">
                   View All
                 </Button>
@@ -196,15 +196,21 @@ export default function DashboardPage() {
                   👤 Profile Settings
                 </Button>
               </Link>
-              <Button variant="outline" className="w-full justify-start">
-                📋 Create New Task
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                👥 Invite Team Member
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                📊 View Reports
-              </Button>
+              <Link href="/dashboard/tasks">
+                <Button variant="outline" className="w-full justify-start">
+                  📋 Create New tasks
+                </Button>
+              </Link>{" "}
+              <Link href="/dashboard/team">
+                <Button variant="outline" className="w-full justify-start">
+                  👥 Invite Team Member
+                </Button>
+              </Link>
+              <Link href={"/dashboard/analytics"}>
+                <Button variant="outline" className="w-full justify-start">
+                  📊 View Reports
+                </Button>
+              </Link>
             </div>
           </div>
 

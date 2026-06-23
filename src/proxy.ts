@@ -30,7 +30,6 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: "/:path",
-
+  matcher: ["/dashboard/:path*"],
   //  " ((?!api|_next/static|_next/image|favicon.ico|node_modules).*)"
 };

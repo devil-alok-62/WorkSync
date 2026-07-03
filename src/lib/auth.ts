@@ -56,16 +56,23 @@ const authOptions: NextAuthOptions = {
   callbacks: {
     //token ke andar user ki information store
     async signIn({ account, user }) {
-      if (account?.provider == "google") {
+      if (account?.provider === "google") {
         await connectDb();
         let existUser = await User.findOne({ email: user?.email });
+
         if (!existUser) {
-          let existUser = await User.create({
+          existUser = await User.create({
             name: user.name,
             email: user?.email,
+            image: user.image,
           });
+        } else if (user?.image && existUser.image !== user.image) {
+          existUser.image = user.image;
+          await existUser.save();
         }
+
         user.id = existUser._id.toString();
+        user.image = existUser.image;
       }
       return true;
     },

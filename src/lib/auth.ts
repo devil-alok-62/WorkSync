@@ -77,6 +77,18 @@ const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.image = user.image;
       }
+
+      if (!user && token.email) {
+        await connectDb();
+        const dbUser = await User.findOne({ email: token.email as string });
+        if (dbUser) {
+          token.id = dbUser._id.toString();
+          token.name = dbUser.name;
+          token.email = dbUser.email;
+          token.image = dbUser.image;
+        }
+      }
+
       return token;
     },
     //session ke andar token ki information store

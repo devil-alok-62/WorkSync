@@ -66,6 +66,7 @@ export async function PATCH(request: NextRequest) {
     const formData = await request.formData();
     const name = formData.get("name") as string | null;
     const password = formData.get("password") as string | null;
+    const currentPassword = formData.get("currentPassword") as string | null;
     const phone = formData.get("phone") as string | null;
     const location = formData.get("location") as string | null;
     const role = formData.get("role") as string | null;
@@ -112,6 +113,23 @@ export async function PATCH(request: NextRequest) {
           { status: 400 },
         );
       }
+      if (user.password) {
+        if (!currentPassword || typeof currentPassword !== "string") {
+          return NextResponse.json(
+            { message: "Current password is required to update password" },
+            { status: 400 },
+          );
+        }
+
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+          return NextResponse.json(
+            { message: "Current password is incorrect" },
+            { status: 400 },
+          );
+        }
+      }
+
       user.password = await bcrypt.hash(password, 10);
     }
 

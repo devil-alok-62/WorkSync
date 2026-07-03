@@ -1,64 +1,94 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { BarChart3, Users, Calendar, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+type Task = {
+  _id: string;
+  title: string;
+  status: string;
+  priority: string;
+  createdAt: string;
+};
+
+type Member = {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+};
+
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+
+  const getTasks = async () => {
+    try {
+      const res = await fetch("/api/tasks", { cache: "no-store" });
+      const data = await res.json();
+      setTasks(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getMembers = async () => {
+    try {
+      const res = await fetch("/api/team", { cache: "no-store" });
+      const data = await res.json();
+      setMembers(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    getTasks();
+    getMembers();
+  }, []);
+
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed",
+  ).length;
+  const thisWeekTasks = tasks.filter((task) => {
+    const createdAt = new Date(task.createdAt).getTime();
+    return Date.now() - createdAt <= 7 * 24 * 60 * 60 * 1000;
+  }).length;
+  const performance = totalTasks
+    ? Math.round((completedTasks / totalTasks) * 100)
+    : 0;
+  const recentTasks = tasks.slice(0, 4);
 
   const stats = [
     {
       label: "Total Tasks",
-      value: "24",
+      value: String(totalTasks),
       icon: CheckCircle2,
       color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
     },
     {
       label: "Team Members",
-      value: "8",
+      value: String(members.length),
       icon: Users,
       color: "bg-green-500/10 text-green-600 dark:text-green-400",
     },
     {
       label: "This Week",
-      value: "5",
+      value: String(thisWeekTasks),
       icon: Calendar,
       color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
     },
     {
       label: "Performance",
-      value: "92%",
+      value: `${performance}%`,
       icon: BarChart3,
       color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-    },
-  ];
-
-  const recentTasks = [
-    {
-      id: 1,
-      title: "Design new landing page",
-      status: "In Progress",
-      priority: "High",
-    },
-    {
-      id: 2,
-      title: "Review pull requests",
-      status: "Pending",
-      priority: "Medium",
-    },
-    {
-      id: 3,
-      title: "Update documentation",
-      status: "Completed",
-      priority: "Low",
-    },
-    {
-      id: 4,
-      title: "Client presentation prep",
-      status: "In Progress",
-      priority: "High",
     },
   ];
 
@@ -71,7 +101,7 @@ export default function DashboardPage() {
             <h1
               className="text-4xl 
               font-bold 
-              bg-gradient-to-r 
+              bg-linear-to-r 
               from-pink-500
               to-purple-500
               bg-clip-text
@@ -141,45 +171,51 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-4">
-              {recentTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-4 transition-all hover:bg-muted/50"
-                >
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground">
-                      {task.title}
-                    </h3>
-                    <div className="mt-1 flex items-center gap-3">
-                      <span
-                        className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
-                          task.status === "Completed"
-                            ? "bg-green-500/20 text-green-700 dark:text-green-400"
-                            : task.status === "In Progress"
-                              ? "bg-blue-500/20 text-blue-700 dark:text-blue-400"
-                              : "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400"
-                        }`}
-                      >
-                        {task.status}
-                      </span>
-                      <span
-                        className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
-                          task.priority === "High"
-                            ? "bg-red-500/20 text-red-700 dark:text-red-400"
-                            : task.priority === "Medium"
-                              ? "bg-orange-500/20 text-orange-700 dark:text-orange-400"
-                              : "bg-gray-500/20 text-gray-700 dark:text-gray-400"
-                        }`}
-                      >
-                        {task.priority}
-                      </span>
+              {recentTasks.length > 0 ? (
+                recentTasks.map((task) => (
+                  <div
+                    key={task._id}
+                    className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-4 transition-all hover:bg-muted/50"
+                  >
+                    <div className="flex-1">
+                      <h3 className="font-medium text-foreground">
+                        {task.title}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-3">
+                        <span
+                          className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
+                            task.status === "Completed"
+                              ? "bg-green-500/20 text-green-700 dark:text-green-400"
+                              : task.status === "In Progress"
+                                ? "bg-blue-500/20 text-blue-700 dark:text-blue-400"
+                                : "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400"
+                          }`}
+                        >
+                          {task.status}
+                        </span>
+                        <span
+                          className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
+                            task.priority === "High"
+                              ? "bg-red-500/20 text-red-700 dark:text-red-400"
+                              : task.priority === "Medium"
+                                ? "bg-orange-500/20 text-orange-700 dark:text-orange-400"
+                                : "bg-gray-500/20 text-gray-700 dark:text-gray-400"
+                          }`}
+                        >
+                          {task.priority}
+                        </span>
+                      </div>
                     </div>
+                    <Button variant="ghost" size="sm">
+                      →
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    →
-                  </Button>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-muted-foreground">
+                  No recent tasks available.
+                </p>
+              )}
             </div>
           </div>
         </div>

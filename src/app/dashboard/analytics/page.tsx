@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
   Bar,
   BarChart,
+  CartesianGrid,
   ResponsiveContainer,
   XAxis,
   YAxis,
@@ -15,49 +17,117 @@ import { Activity, CheckCircle2, Clock, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const taskData = [
-  {
-    month: "Jan",
-    tasks: 120,
-  },
-  {
-    month: "Feb",
-    tasks: 240,
-  },
-  {
-    month: "Mar",
-    tasks: 360,
-  },
-  {
-    month: "Apr",
-    tasks: 520,
-  },
-  {
-    month: "May",
-    tasks: 700,
-  },
-];
+type Task = {
+  _id: string;
+  title: string;
+  status: string;
+  priority: string;
+  progress: number;
+  createdAt: string;
+};
 
-const teamData = [
-  {
-    name: "Dev",
-    value: 90,
-  },
-  {
-    name: "Design",
-    value: 75,
-  },
-  {
-    name: "Marketing",
-    value: 60,
-  },
-  {
-    name: "Sales",
-    value: 85,
-  },
+type Member = {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+const defaultTaskData = [
+  { month: "Jan", tasks: 0 },
+  { month: "Feb", tasks: 0 },
+  { month: "Mar", tasks: 0 },
+  { month: "Apr", tasks: 0 },
+  { month: "May", tasks: 0 },
+  { month: "Jun", tasks: 0 },
+  { month: "Jul", tasks: 0 },
+  { month: "Aug", tasks: 0 },
+  { month: "Sep", tasks: 0 },
+  { month: "Oct", tasks: 0 },
+  { month: "Nov", tasks: 0 },
+  { month: "Dec", tasks: 0 },
+];
+const defaultTeamData = [
+  { name: "Dev", value: 0 },
+  { name: "Design", value: 0 },
+  { name: "Marketing", value: 0 },
+  { name: "Sales", value: 0 },
 ];
 
 export default function AnalyticsPage() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+
+  const getTasks = async () => {
+    try {
+      const res = await fetch("/api/tasks", { cache: "no-store" });
+      const data = await res.json();
+      setTasks(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getMembers = async () => {
+    try {
+      const res = await fetch("/api/team", { cache: "no-store" });
+      const data = await res.json();
+      setMembers(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    getTasks();
+    getMembers();
+  }, []);
+
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(
+    (task) => task.status === "Completed",
+  ).length;
+  const pendingTasks = tasks.filter((task) => task.status === "Pending").length;
+  const totalMembers = members.length;
+  const taskData = useMemo(() => {
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const counts = months.map((month) => ({ month, tasks: 0 }));
+
+    tasks.forEach((task) => {
+      const date = new Date(task.createdAt);
+      const month = months[date.getMonth()];
+      const monthEntry = counts.find((entry) => entry.month === month);
+      if (monthEntry) {
+        monthEntry.tasks += 1;
+      }
+    });
+
+    return counts.slice(0, new Date().getMonth() + 1);
+  }, [tasks]);
+
+  const teamData = useMemo(() => {
+    const groups = new Map<string, number>();
+    members.forEach((member) => {
+      const group = member.role.split(" ")[0] || "Other";
+      groups.set(group, (groups.get(group) ?? 0) + 1);
+    });
+
+    return [...groups.entries()].map(([name, value]) => ({ name, value }));
+  }, [members]);
+
   return (
     <div
       className="
@@ -132,13 +202,29 @@ sm:grid-cols-2
 lg:grid-cols-4
 "
       >
-        <StatsCard title="Total Tasks" value="12,450" icon={<CheckCircle2 />} />
+        <StatsCard
+          title="Total Tasks"
+          value={String(totalTasks)}
+          icon={<CheckCircle2 />}
+        />
 
-        <StatsCard title="Completed" value="9,820" icon={<TrendingUp />} />
+        <StatsCard
+          title="Completed"
+          value={String(completedTasks)}
+          icon={<TrendingUp />}
+        />
 
-        <StatsCard title="Team Members" value="48" icon={<Users />} />
+        <StatsCard
+          title="Team Members"
+          value={String(totalMembers)}
+          icon={<Users />}
+        />
 
-        <StatsCard title="Pending" value="320" icon={<Clock />} />
+        <StatsCard
+          title="Pending"
+          value={String(pendingTasks)}
+          icon={<Clock />}
+        />
       </div>
 
       {/* Charts */}
@@ -146,36 +232,29 @@ lg:grid-cols-4
       <div
         className="
 mt-8
-grid
-gap-6
-lg:grid-cols-2
+space-y-6
 "
       >
         <Card
           className="
+w-full
 border-border/50
 bg-card/60
 backdrop-blur-xl
 shadow-xl
 "
         >
+          {" "}
           <CardHeader>
             <CardTitle>Task Growth</CardTitle>
           </CardHeader>
-
-          <CardContent
-            className="
-h-[350px]
-"
-          >
+          <CardContent className="h-136 text-chart-5">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={taskData}>
-                <XAxis dataKey="month" />
-
-                <YAxis />
-
+              <AreaChart data={taskData.length ? taskData : defaultTaskData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
                 <Tooltip />
-
                 <Area
                   type="monotone"
                   dataKey="tasks"
@@ -188,9 +267,9 @@ h-[350px]
             </ResponsiveContainer>
           </CardContent>
         </Card>
-
         <Card
           className="
+w-full
 border-border/50
 bg-card/60
 backdrop-blur-xl
@@ -201,13 +280,9 @@ shadow-xl
             <CardTitle>Team Performance</CardTitle>
           </CardHeader>
 
-          <CardContent
-            className="
-h-[350px]
-"
-          >
+          <CardContent className="h-136 text-chart-5">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={teamData}>
+              <BarChart data={teamData.length ? teamData : defaultTeamData}>
                 <XAxis dataKey="name" />
 
                 <YAxis />

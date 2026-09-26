@@ -14,11 +14,30 @@ type Profile = {
   bio: string;
 };
 
+async function uploadProfileImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/profile/upload", {
+    method: "POST",
+    body: formData,
+  });
+  const data = (await response.json()) as {
+    error?: string;
+    imageUrl?: string;
+  };
+
+  if (!response.ok || !data.imageUrl) {
+    throw new Error(data.error || "Upload failed");
+  }
+
+  return data.imageUrl;
+}
+
 function Page() {
-  const { data, update } = useSession();
+  const { update } = useSession();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
 
   useEffect(() => {
@@ -46,28 +65,36 @@ function Page() {
       return;
     }
     const file = files[0];
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-
-    const formData = new FormData();
-    formData.append("image", file);
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    setStatusMessage("Uploading image...");
 
     try {
+      const imageUrl = await uploadProfileImage(file);
+      const formData = new FormData();
+      formData.append("imageUrl", imageUrl);
+
       const res = await fetch("/api/profile", {
         method: "PATCH",
         body: formData,
       });
       const data = await res.json();
       if (!res.ok) {
-        setStatusMessage(data.message || "Unable to update profile image.");
-        return;
+        throw new Error(data.message || "Unable to update profile image.");
       }
       setProfile(data.user);
+      setImagePreview(data.user.image || imageUrl);
       update?.();
       setStatusMessage("Profile image updated.");
     } catch (error) {
       console.error(error);
-      setStatusMessage("Unable to update profile image.");
+      setImagePreview(profile?.image || "");
+      setStatusMessage(
+        error instanceof Error ? error.message : "Unable to update profile image.",
+      );
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      event.target.value = "";
     }
   };
 

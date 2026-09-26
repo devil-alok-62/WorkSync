@@ -71,7 +71,7 @@ export async function PATCH(request: NextRequest) {
     const location = formData.get("location") as string | null;
     const role = formData.get("role") as string | null;
     const bio = formData.get("bio") as string | null;
-    const imageFile = formData.get("image") as File | null;
+    const imageUrl = formData.get("imageUrl");
 
     await connectDb();
     const user = await User.findOne({ email: session.user.email });
@@ -99,11 +99,29 @@ export async function PATCH(request: NextRequest) {
       user.bio = bio.trim();
     }
 
-    if (imageFile && imageFile instanceof File && imageFile.size > 0) {
-      const bytes = await imageFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const base64 = buffer.toString("base64");
-      user.image = `data:${imageFile.type};base64,${base64}`;
+    if (imageUrl !== null) {
+      if (typeof imageUrl !== "string") {
+        return NextResponse.json(
+          { message: "Invalid profile image URL" },
+          { status: 400 },
+        );
+      }
+
+      try {
+        const parsedImageUrl = new URL(imageUrl);
+        if (
+          parsedImageUrl.protocol !== "https:" ||
+          parsedImageUrl.hostname !== "res.cloudinary.com"
+        ) {
+          throw new Error("Invalid profile image URL");
+        }
+        user.image = parsedImageUrl.toString();
+      } catch {
+        return NextResponse.json(
+          { message: "Invalid profile image URL" },
+          { status: 400 },
+        );
+      }
     }
 
     if (password && typeof password === "string") {
